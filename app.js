@@ -84,23 +84,27 @@ intents.matches('search', [
             if(err) { console.log(err); return; }
 
             var results = JSON.parse(body);
+
             if (results.length == 0) {
               session.send('I could not find any courses');
-
             }
-            if (results.length == 1) {
-              session.send('I found this course for you');
+
+            if (results.length >= 1 && results.length <= 3) {
+              if (results.length == 1)
+                session.send('I found this course for you');
+              else
+                session.send('I found these courses for you');
+
               console.log(results[0].coursename)
-              session.send(results[0].coursename);
-              session.send('You can check out more info at');
-              session.send(results[0].url);
+
+              session.send(results[0].coursename + " - " + results[0].url);
             }
 
           console.log("Get response: " + response.statusCode);
           console.log(body);
         }
 
-        searchForResults(session,search, onReturnResult);
+        searchForResults(session, session.dialogData.search, onReturnResult);
         // Prompt for title
         if (!session.dialogData.search.coursetopic) {
             builder.Prompts.text(session, 'What is the topic of the seminar?');
