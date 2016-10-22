@@ -3,3 +3,14 @@
     right: 40px;
     bottom: 30px;
 }
+
+.chatbotbox{
+    width:400px; 
+    height:500px;
+    position:fixed;
+    top: 120px;
+}
+
+#chatboximg{
+    height: 120px;
+}
