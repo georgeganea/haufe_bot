@@ -40,9 +40,42 @@ bot.dialog('/', intents);
 intents.matches('register', [
     function (session, args, next) {
         var subject = builder.EntityRecognizer.findEntity(args.entities, 'subject');
-        // console.log(subject);
-        builder.Prompts.text(session, 'The subject is ' + subject.entity);
-        session.endDialog();
+        var product_type = builder.EntityRecognizer.findEntity(args.entities, 'product_type');
+        session.dialogData.registration = {
+          subject: subject ? subject.entity : null,
+          product_type: product_type ? product_type.entity : null
+        }
+        // Prompt for title
+        if (!session.dialogData.registration.subject) {
+            builder.Prompts.text(session, 'What is the subject?');
+        } else {
+            next();
+        }
+        //console.log(subject);
+        //session.endDialog();
+    },
+
+    function (session, results, next) {
+      var registration = session.dialogData.registration;
+      if (results.response) {
+         registration.subject = results.response;
+      }
+
+      if (registration.subject && !registration.product_type) {
+            builder.Prompts.text(session, 'Would you like to book a seminar or a conference?');
+      } else {
+            next();
+      }
+    },
+
+    function (session,results, results) {
+      var registration = session.dialogData.registration;
+      if (results.response) {
+           registration.product_type = builder.EntityRecognizer.findEntity(results.entities, 'product_type');
+      }
+      session.send('registration data is now ' + registration.product_type + " " + registration.subject );
+      session.send('we can now register for a new seminar or conference');
+      session.endDialog();
     }
 ]);
 
