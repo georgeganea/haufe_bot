@@ -8,3 +8,7 @@ Alfred is a friendly bot that helps users find seminars or courses in the Haufe 
 It's built using the Microsoft Bot Framework https://docs.botframework.com/en-us/node/builder/overview/#navtitle with the Nodejs SDK.
 It uses a trained luis.ai application for natural language processing. 
 
+//TODO 
+- fix the https docker container issue with https://letsencrypt.org/getting-started/ and https://www.duckdns.org/
+- include the dockerised bot it in the index.html
+

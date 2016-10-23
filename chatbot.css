@@ -5,10 +5,11 @@
 }
 
 .chatbotbox{
-    width:400px; 
+    width:500px; 
     height:500px;
     position:fixed;
     top: 120px;
+    
 }
 
 #chatboximg{
