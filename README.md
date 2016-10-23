@@ -1,7 +1,8 @@
 # Alfred the Chatcat 
 
 
-![Alfred the friendly ChatCat](https://raw.githubusercontent.com/georgeganea/haufe_bot/master/chatcat.png)
+![Alfred the friendly ChatCat](https://raw.githubusercontent.com/georgeganea/haufe_bot/master/chatcat.png) 
+(source https://dribbble.com/shots/527586-Chatcat)
 
 Alfred is a friendly bot that helps users find seminars or courses in the Haufe Academy. 
 It's built using the Microsoft Bot Framework https://docs.botframework.com/en-us/node/builder/overview/#navtitle with the Nodejs SDK.
