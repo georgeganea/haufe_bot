@@ -47,86 +47,99 @@ var intents = new builder.IntentDialog({ recognizers: [recognizer] });
 bot.dialog('/', [
     function (session) {
         session.send("Hi, I\'m Alfred the friendly bot that can help you find information about seminars and courses");
-        session.send('You can ask from me stuff like "give me a list of seminars on Coaching"');
+        session.send('You can ask from me stuff like "give me a list of seminars on leadership"');
         session.beginDialog("/search");
       }
 ]);
 
 
 
-var searchForResults = function (session, search, callback) {
+
+var searchForResults = function (session, search, entity, question) {
+
+  var onReturnResult =  function(err, response, body) {
+    var i = 0;
+    if(err) { console.log(err); return; }
+
+    var results = JSON.parse(body);
+
+    if (results.length == 0) {
+          session.send('I could not find any courses');
+    }
+    else {
+      if (results.length >= 1 && results.length <= 3) {
+
+        var msg = "";
+
+        if (results.length == 1)
+          msg += 'I found this course for you: \n';
+        else
+          msg += 'I found these courses for you: \n';
+
+        for (i = 0; i < results.length; i++){
+            msg += results[i].coursename + " - " + results[0].url + "\n";
+        }
+
+        console.log("message is " + msg);
+        session.send(msg);
+      }
+      else {
+        console.log("should search for " + entity.coursetopic)
+        if (!entity.coursetopic) {
+          builder.Prompts.text(session, "I found " + results.length + " results. Would you like to narrow it down? " + question);
+        } else {
+          next();
+        }
+      }
+   }
+
+    console.log("Get response: " + response.statusCode);
+    console.log(body);
+  }
+  console.log("searching for results now");
   var url = 'https://sheetlabs.com/HALE/courses';
-  request({url:url, qs:search}, callback);
+  request({url:url, qs:search}, onReturnResult);
 }
 
 bot.dialog('/search', intents);
 
 intents.onDefault(builder.DialogAction.send("Sorry, I don't understand..."));
+
+
+
 // Add intent handlers
 intents.matches('search', [
 
     function (session, results, next) {
+        console.log (JSON.stringify(results),null,2);
         var topic = builder.EntityRecognizer.findEntity(results.entities, 'topic');
         var location = builder.EntityRecognizer.findEntity(results.entities, 'builtin.geography.city');
         var datetime = builder.EntityRecognizer.findEntity(results.entities, 'builtin.datetime.date');
         var duration = builder.EntityRecognizer.findEntity(results.entities, 'builtin.datetime.duration');
 
         session.dialogData.search = {
-          coursetopic: topic ? topic.entity : null,
-          courselocation: location ? location.entity : null,
-          coursemonth: datetime ? new Date(datetime.resolution.date).toLocaleString("en-us", { month: "long" }) : null,
-          courseduration: duration ? (parseIsoDuration(duration.resolution.duration)/86400000) : null,
+          coursetopic: topic ? topic.entity : undefined,
+          courselocation: location ? location.entity : undefined,
+          coursemonth: datetime ? new Date(datetime.resolution.date).toLocaleString("en-us", { month: "long" }) : undefined,
+          courseduration: duration ? (parseIsoDuration(duration.resolution.duration)/86400000) : undefined,
         }
 
-
-        var onReturnResult =  function(err, response, body) {
-
-            if(err) { console.log(err); return; }
-
-            var results = JSON.parse(body);
-
-            if (results.length == 0) {
-              session.send('I could not find any courses');
-            }
-
-            if (results.length >= 1 && results.length <= 3) {
-              if (results.length == 1)
-                session.send('I found this course for you');
-              else
-                session.send('I found these courses for you');
-
-              console.log(results[0].coursename)
-
-              session.send(results[0].coursename + " - " + results[0].url);
-            }
-
-          console.log("Get response: " + response.statusCode);
-          console.log(body);
-        }
-
-        searchForResults(session, session.dialogData.search, onReturnResult);
+        searchForResults(session, session.dialogData.search, session.dialogData.search, "What is the topic of the course?");
         // Prompt for title
-        if (!session.dialogData.search.coursetopic) {
-            builder.Prompts.text(session, 'What is the topic of the seminar?');
-        } else {
-            next();
-        }
+
         //console.log(topic);
     },
 
     function (session, results, next) {
       console.log(JSON.stringify(results));
       var search = session.dialogData.search;
-      //TODO check that we really get a topic here
+      //TODO check that we really get a topic here or that we got a no or maybe the user wants to see the results
       if (results.response) {
          search.coursetopic = results.response;
       }
 
-      if (!search.courselocation) {
-            builder.Prompts.text(session, 'Where should the seminar take place?');
-      } else {
-            next();
-      }
+      searchForResults(session, session.dialogData.search, session.dialogData.search, "Where should the seminar take place?");
+
     },
 
     function (session, results, next) {
@@ -137,11 +150,8 @@ intents.matches('search', [
          search.courselocation = results.response;
       }
 
-      if (!search.coursemonth) {
-            builder.Prompts.text(session, 'When should the seminar take place?');
-      } else {
-            next();
-      }
+      searchForResults(session, session.dialogData.search, session.dialogData.search, "When should the seminar take place?");
+      
     },
 
     function (session, results, next) {
@@ -153,11 +163,7 @@ intents.matches('search', [
         search.coursemonth = new Date(datetime.resolution.date).toLocaleString("en-us", { month: "long" });
       }
 
-      if (!search.courseduration) {
-            builder.Prompts.text(session, 'How long should the course last?');
-      } else {
-            next();
-      }
+     searchForResults(session, session.dialogData.search, session.dialogData.search, "How long should the course last?");
     },
 
     function (session,results, results) {
@@ -166,43 +172,36 @@ intents.matches('search', [
       if (results.response) {
            search.courseduration = builder.EntityRecognizer.findEntity(results.entities, 'builtin.datetime.duration');
       }
-      searchForResults(session,search);
+      
+       var onReturnResult = function(err, response, body) {
+
+          if (results.length == 0) {
+            session.send('I could not find any courses');
+          }
+
+          if (results.length >= 1 && results.length <= 3) {
+
+            var msg = "";
+
+            if (results.length == 1)
+              msg += 'I found this course for you: \n';
+            else
+              msg += 'I found these courses for you: \n';
+
+            for (i = 0; i < results.length; i++){
+              msg += results[i].coursename + " - " + results[0].url + "\n";
+            }
+
+            console.log("message is " + msg);
+            session.send(msg);
+          }
+       }
+
+
+      searchForResults(session, search, onReturnResult);
       console.log(JSON.stringify(session.dialogData.search));
       session.endDialog();
     }
 ]);
 
 
-/*
-intents.matches(/^change name/i, [
-    function (session) {
-        session.beginDialog('/profile');
-    },
-    function (session, results) {
-        session.send('Ok... Changed your name to %s', session.userData.name);
-    }
-]);
-
-intents.onDefault([
-    function (session, results, next) {
-        if (!session.userData.name) {
-            session.beginDialog('/profile');
-        } else {
-            next();
-        }
-    },
-    function (session, results) {
-        session.send('Hello %s!', session.userData.name);
-    }
-]);
-
-bot.dialog('/profile', [
-    function (session) {
-        builder.Prompts.text(session, 'Hi! What is your name?');
-    },
-    function (session, results) {
-        session.userData.name = results.response;
-        session.endDialog();
-    }
-]);
-*/
