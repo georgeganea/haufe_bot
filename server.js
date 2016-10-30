@@ -32,18 +32,15 @@ server.post('/api/messages', connector.listen());
 // Bots Dialogs
 //=========================================================
 
-// Create LUIS recognizer that points at our model and add it as the root '/' dialog for our Cortana Bot.
+// configure a link to the luis.ai app
 var model = 'https://api.projectoxford.ai/luis/v1/application?id=fb8caa4c-1173-4f53-a6f7-be6ffd88eb83&subscription-key=258332201bbf473fa20a7f216dd45348';
 var recognizer = new builder.LuisRecognizer(model);
 var intents = new builder.IntentDialog({ recognizers: [recognizer] });
 
 
-// bot.dialog('/', intents);
-
 //TODO add a map of questions for each question the bot asks so it does not ask the same question over and over
 
-
-
+//Alfred is friendly it first says 'hi' and then begins the /search dialog
 bot.dialog('/', [
     function (session) {
         session.send("Hi, I\'m Alfred the friendly bot that can help you find information about seminars and courses");
@@ -85,6 +82,7 @@ var searchForResults = function (session, search, entity, question) {
       }
       else {
         console.log("should search for " + entity.coursetopic)
+        //TODO this looks like a bug, coursetopic should not be hardcoded, it should be a variable that matches the question
         if (!entity.coursetopic) {
           builder.Prompts.text(session, "I found " + results.length + " results. Would you like to narrow it down? " + question);
         } else {
@@ -101,16 +99,17 @@ var searchForResults = function (session, search, entity, question) {
   request({url:url, qs:search}, onReturnResult);
 }
 
+//the /search dialog is configured wit a new builder.IntentDialog({ recognizers: [recognizer] }); which has the luis recognizer
 bot.dialog('/search', intents);
 
 intents.onDefault(builder.DialogAction.send("Sorry, I don't understand..."));
 
 
-
-// Add intent handlers
+//if the luis recognizer detected the search intent, start the warterfall conversation path that should lead to a search result
 intents.matches('search', [
 
     function (session, results, next) {
+        //the first step in the waterfall, save everything the user gave us
         console.log (JSON.stringify(results),null,2);
         var topic = builder.EntityRecognizer.findEntity(results.entities, 'topic');
         var location = builder.EntityRecognizer.findEntity(results.entities, 'builtin.geography.city');
@@ -124,10 +123,11 @@ intents.matches('search', [
           courseduration: duration ? (parseIsoDuration(duration.resolution.duration)/86400000) : undefined,
         }
 
+        //do a search with what we have so far
+        //and if we have too many results and if the topic is missing, ask for the topic
+        //                                    if the topic is not missing, then just go to the next step and ask the next question
         searchForResults(session, session.dialogData.search, session.dialogData.search, "What is the topic of the course?");
-        // Prompt for title
 
-        //console.log(topic);
     },
 
     function (session, results, next) {
@@ -151,7 +151,7 @@ intents.matches('search', [
       }
 
       searchForResults(session, session.dialogData.search, session.dialogData.search, "When should the seminar take place?");
-      
+
     },
 
     function (session, results, next) {
@@ -172,7 +172,7 @@ intents.matches('search', [
       if (results.response) {
            search.courseduration = builder.EntityRecognizer.findEntity(results.entities, 'builtin.datetime.duration');
       }
-      
+
        var onReturnResult = function(err, response, body) {
 
           if (results.length == 0) {
@@ -197,11 +197,8 @@ intents.matches('search', [
           }
        }
 
-
       searchForResults(session, search, onReturnResult);
       console.log(JSON.stringify(session.dialogData.search));
       session.endDialog();
     }
 ]);
-
-
